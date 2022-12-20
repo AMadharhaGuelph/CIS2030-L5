@@ -1,0 +1,190 @@
+00008000 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 2022-11-04 1:42:06 AM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Title      :
+00000000                             3  * Written by :
+00000000                             4  * Date       :
+00000000                             5  * Description:
+00000000                             6  *-----------------------------------------------------------
+00008000                             7              ORG         $8000
+00008000                             8  **** Main Code ****
+00008000  4879 00009000              9  MAIN:       PEA         LIST                ;push pointer to list
+00008006  6100 002A                 10              BSR         GET_DATA            ;get list input
+0000800A  2F03                      11              MOVE.L      D3,-(A7)            ;push size of list
+0000800C  4879 00009000             12              PEA         LIST                ;push pointer to list
+00008012  4879 00009028             13              PEA         STRUCT              ;push pointer to struct
+00008018  6100 005C                 14              BSR         STATISTICS          ;calculate min,max,average,remainder
+0000801C  43F9 00009028             15              LEA         STRUCT,A1           ;initialize pointer to start of struct to push its elements to the stack
+00008022  2F19                      16              MOVE.L      (A1)+,-(A7)         ;push min
+00008024  2F19                      17              MOVE.L      (A1)+,-(A7)         ;push max
+00008026  2F19                      18              MOVE.L      (A1)+,-(A7)         ;push quotient
+00008028  2F19                      19              MOVE.L      (A1)+,-(A7)         ;push remainder
+0000802A  6100 0096                 20              BSR         DISPLAY             ;display all struct elements
+0000802E  6000 010C                 21              BRA         END
+00008032                            22  
+00008032                            23  **** Subroutine: GET_DATA(*list) ****
+00008032  48E7 E060                 24  GET_DATA    MOVEM.L     D0-D2/A1/A2,-(A7)   ;save working registers
+00008036  246F 0018                 25              MOVEA.L     24(A7),A2           ;initialize pointer to list
+0000803A  43F9 00009038             26  ERR         LEA         MSG1,A1             ;point to MSG1
+00008040  700E                      27              MOVE.L      #14,D0              ;output mode
+00008042  4E4F                      28              TRAP        #15                 ;prompt user for number of values
+00008044  7004                      29              MOVE.L      #4,D0               ;input mode
+00008046  4E4F                      30              TRAP        #15                 ;input number of values into D1
+00008048  B27C 000A                 31              CMP         #10,D1              ;check if input is greater 10
+0000804C  6EEC                      32              BGT         ERR                 ;loop
+0000804E  B27C 0001                 33              CMP         #1,D1               ;check if input is less than 1
+00008052  6DE6                      34              BLT         ERR                 ;loop
+00008054  2401                      35              MOVE.L      D1,D2               ;move counter to D2 for future input
+00008056  2601                      36              MOVE.L      D1,D3               ;size of list returned in D3
+00008058  6700 0016                 37  INPUTLOOP   BEQ         EXIT                ;counter = 0? yes, then exit
+0000805C  43F9 00009060             38              LEA         MSG2,A1             ;point to MSG2
+00008062  700E                      39              MOVE.L      #14,D0              ;output mode
+00008064  4E4F                      40              TRAP        #15                 ;prompt user for number
+00008066  7004                      41              MOVE.L      #4,D0               ;input mode
+00008068  4E4F                      42              TRAP        #15                 ;input number
+0000806A  24C1                      43              MOVE.L      D1,(A2)+            ;move number to list        
+0000806C  5302                      44              SUB.B       #1,D2               ;decrement loop counter
+0000806E  60E8                      45              BRA         INPUTLOOP           ;loop         
+00008070  4CDF 0607                 46  EXIT        MOVEM.L     (A7)+,D0-D2/A1/A2   ;restore working registers   
+00008074  4E75                      47              RTS                             ;return to calling code 
+00008076                            48  
+00008076                            49  **** Subroutine: STATISTICS(int number, *list, *struct) ****
+00008076  48E7 7C20                 50  STATISTICS  MOVEM.L     D1-D5/A2,-(A7)      ;save working registers
+0000807A  246F 0020                 51              MOVEA.L     32(A7),A2           ;initialize pointer to list
+0000807E  266F 001C                 52              MOVEA.L     28(A7),A3           ;initalize pointer to struct
+00008082  2212                      53              MOVE.L      (A2),D1             ;store first element in list into D1
+00008084  2412                      54              MOVE.L      (A2),D2             ;store first element in list into D2
+00008086  2A03                      55              MOVE.L      D3,D5               ;store total amount of elements into D5, turning D3 into a counter
+00008088                            56              
+00008088  5383                      57  LOOP        SUB.L       #1,D3               ;decrement counter 
+0000808A  B67C FFFF                 58              CMP         #-1,D3              ;compare counter
+0000808E  6700 0018                 59              BEQ         EXIT1               ;counter = 0? yes, then exit
+00008092  201A                      60              MOVE.L      (A2)+,D0            ;store current item
+00008094  D880                      61              ADD.L       D0,D4               ;add to total sum
+00008096  B240                      62              CMP         D0,D1               ;compare current item with current min
+00008098  6D00 0006                 63              BLT         GREATER             ;if current item is greater than current min, go to greater
+0000809C  2200                      64  LESSER      MOVE.L      D0,D1               ;otherwise, update current min to current item           
+0000809E  60E8                      65              BRA         LOOP                ;loop
+000080A0                            66              
+000080A0  B440                      67  GREATER     CMP         D0,D2               ;compare current item with current max
+000080A2  6CE4                      68              BGE         LOOP                ;if current item is less than or equal to current max, loop
+000080A4  2400                      69              MOVE.L      D0,D2               ;otherwise, update current max
+000080A6  60E0                      70              BRA         LOOP                ;loop         
+000080A8                            71                         
+000080A8  26C1                      72  EXIT1       MOVE.L      D1,(A3)+            ;move min to struct
+000080AA  26C2                      73              MOVE.L      D2,(A3)+            ;move max to struct
+000080AC  89C5                      74              DIVS        D5,D4               ;sum/totalElements -> D4
+000080AE  36FC 0000                 75              MOVE.W      #0,(A3)+            ;add buffer zeros
+000080B2  36C4                      76              MOVE.W      D4,(A3)+            ;move quotient to struct
+000080B4  4844                      77              SWAP        D4                  ;swap remainder into the lower bits
+000080B6  36FC 0000                 78              MOVE.W      #0,(A3)+            ;add buffer zeros
+000080BA  36C4                      79              MOVE.W      D4,(A3)+            ;move remainder to struct
+000080BC  4CDF 043E                 80              MOVEM.L     (A7)+,D1-D5/A2      ;restore working registers
+000080C0  4E75                      81              RTS
+000080C2                            82              
+000080C2                            83       
+000080C2                            84  **** Subroutine: DISPLAY(int max, int min, int quotient, int remainder) ****
+000080C2  48E7 C040                 85  DISPLAY     MOVEM.L     D0-D1/A1,-(A7)      ;save working register(s)
+000080C6  700E                      86              MOVE.L      #14,D0              ;output mode
+000080C8  43F9 0000906F             87              LEA         MSG3,A1             ;point to msg 3    
+000080CE  4E4F                      88              TRAP        #15                 ;output minimum
+000080D0                            89              
+000080D0  7003                      90              MOVE.L      #3,D0               ;output single signed value mode
+000080D2  222F 001C                 91              MOVE.L      28(A7),D1           ;store min in D1
+000080D6  4E4F                      92              TRAP        #15                 ;output min value
+000080D8                            93              
+000080D8  700E                      94              MOVE.L      #14,D0              ;change output mode
+000080DA  43F9 00009090             95              LEA         NEWLINE,A1          ;point to newline
+000080E0  4E4F                      96              TRAP        #15                 ;output newline
+000080E2                            97              
+000080E2  43F9 0000907A             98              LEA         MSG4,A1             ;point to msg 4
+000080E8  700E                      99              MOVE.L      #14,D0              ;null character ended ouput mode
+000080EA  4E4F                     100              TRAP        #15                 ;output maximum
+000080EC                           101              
+000080EC  7003                     102              MOVE.L      #3,D0               ;change single signed value mode
+000080EE  222F 0018                103              MOVE.L      24(A7),D1           ;store max in D1
+000080F2  4E4F                     104              TRAP        #15                 ;output maximum value
+000080F4                           105              
+000080F4  700E                     106              MOVE.L      #14,D0              ;change output mode
+000080F6  43F9 00009090            107              LEA         NEWLINE,A1          ;point to newline
+000080FC  4E4F                     108              TRAP        #15                 ;output newline
+000080FE                           109              
+000080FE  700E                     110              MOVE.L      #14,D0              ;change output mode
+00008100  43F9 00009085            111              LEA         MSG5,A1             ;point to msg 5
+00008106  4E4F                     112              TRAP        #15                 ;output average
+00008108  7003                     113              MOVE.L      #3,D0               ;change output mode
+0000810A  222F 0014                114              MOVE.L      20(A7),D1           ;move average to D1
+0000810E  4E4F                     115              TRAP        #15                 ;ouput average value
+00008110                           116              
+00008110  4281                     117              CLR.L       D1                  ;clear D1
+00008112  7006                     118              MOVE.L      #6,D0               ;change output mode
+00008114  123C 0020                119              MOVE.B      #32,D1              ;move a space to D1
+00008118  4E4F                     120              TRAP        #15                 ;output space
+0000811A                           121              
+0000811A  7003                     122              MOVE.L      #3,D0               ;change output mode
+0000811C  4281                     123              CLR.L       D1                  ;clear D1
+0000811E  222F 0010                124              MOVE.L      16(A7),D1           ;move remainder to D1
+00008122  4E4F                     125              TRAP        #15                 ;output remainder
+00008124                           126              
+00008124  4281                     127              CLR.L       D1                  ;clear D1
+00008126  7006                     128              MOVE.L      #6,D0               ;change output mode
+00008128  123C 002F                129              MOVE.B      #47,D1              ;move / to D1
+0000812C  4E4F                     130              TRAP        #15                 ;ouput /
+0000812E                           131              
+0000812E  4281                     132              CLR.L       D1                  ;clear D1
+00008130  7003                     133              MOVE.L      #3,D0               ;change output mode
+00008132  2203                     134              MOVE.L      D3,D1               ;move D3 to D1 (total amount of elements)
+00008134  4E4F                     135              TRAP        #15                 ;output total elements
+00008136                           136              
+00008136  4CDF 0203                137              MOVEM.L     (A7)+,D0-D1/A1      ;restore working registers
+0000813A  4E75                     138              RTS
+0000813C                           139  
+0000813C                           140  **** END ****
+0000813C  FFFF FFFF                141  END         SIMHALT          
+00008140                           142  
+00008140                           143  **** Variables and Constants ****
+00009000                           144              ORG         $9000
+00009000                           145  LIST        DS.L        10
+00009028                           146  STRUCT      DS.L        4
+00009038= 45 6E 74 65 72 20 ...    147  MSG1        DC.B        'Enter number of values in list (1-10): ',0
+00009060= 45 6E 74 65 72 20 ...    148  MSG2        DC.B        'Enter number: ',0
+0000906F= 4D 69 6E 69 6D 75 ...    149  MSG3        DC.B        'Minimum = ',0
+0000907A= 4D 61 78 69 6D 75 ...    150  MSG4        DC.B        'Maximum = ',0
+00009085= 41 76 65 72 61 67 ...    151  MSG5        DC.B        'Average = ',0
+00009090= 0D 0A 00                 152  NEWLINE     DC.B        '',CR,LF,0
+00009093                           153  
+00009093  =0000000D                154  CR          EQU         $0D
+00009093  =0000000A                155  LF          EQU         $0A
+00009093                           156              END         MAIN      
+
+No errors detected
+No warnings generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+CR                  D
+DISPLAY             80C2
+END                 813C
+ERR                 803A
+EXIT                8070
+EXIT1               80A8
+GET_DATA            8032
+GREATER             80A0
+INPUTLOOP           8058
+LESSER              809C
+LF                  A
+LIST                9000
+LOOP                8088
+MAIN                8000
+MSG1                9038
+MSG2                9060
+MSG3                906F
+MSG4                907A
+MSG5                9085
+NEWLINE             9090
+STATISTICS          8076
+STRUCT              9028
